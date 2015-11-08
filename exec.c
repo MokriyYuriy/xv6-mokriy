@@ -131,16 +131,42 @@ checkinterpreter(struct inode *ip)
   return ln >= 2 && fstr[0] == '#' && fstr[1] == '!'; 
 }
 
+int getaddargv(char *interpreter_path, char **newargv)
+{
+  int curarg = 0, curlen = 0, i, firstnonspace = 0;
+  for(i = 0; interpreter_path[i]; i++) {
+    if (interpreter_path[i] == ' ') {
+      if (curlen) {
+        interpreter_path[i] = 0;
+        newargv[curarg++] = interpreter_path + firstnonspace;
+        curlen = 0;
+        if (curarg == MAXARG) {
+          return MAXARG;
+        }
+      }
+    } else {
+      if (curlen == 0) {
+        firstnonspace = i;
+      }
+      curlen++;
+    } 
+  }
+  if (curlen) {
+    newargv[curarg++] = interpreter_path + firstnonspace;
+  }
+  return curarg;
+}
+
 int
 scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
 {
-  char *interpreter_path;
-  int ln, argc, i, res, size;
+  char *interpreter_path, *addargv[MAXARG];
+  int ln, argc, i, res, size, addargc;
   if(!checkinterpreter(ip)) {
     goto bad;
   }
   interpreter_path = kalloc();
-  size = readi(ip, interpreter_path, 2, 4000);
+  size = readi(ip, interpreter_path, 2, PGSIZE);
   iunlockput(ip);
   end_op();
   for(ln = 0; ln < size && interpreter_path[ln] != '\n'; ln++) {}
@@ -149,14 +175,17 @@ scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
   }
   interpreter_path[ln] = 0;
   for(argc = 0; argv[argc]; argc++) {}
-  if(argc + 1 >= MAXARG) {
+  addargc = getaddargv(interpreter_path, addargv);
+  if (!addargc || addargc + argc >= MAXARG) {
     goto bad;
-  };
-  for(i = argc; i >= 0; i--) {
-    argv[i + 1] = argv[i];
   }
-  argv[0] = interpreter_path;
-  pathname = interpreter_path;
+  for(i = argc; i >= 0; i--) {
+    argv[i + addargc] = argv[i]; 
+  }
+  for(i = 0; i < addargc; i++) {
+    argv[i] = addargv[i];
+  }
+  pathname = argv[0];
   res = cleverexec(pathname, argv, recursion_limit - 1);
   kfree(interpreter_path);
   return res;
