@@ -7,9 +7,9 @@
 #include "x86.h"
 #include "elf.h"
 
-int cleverexec(char *, char **, int);
-char checkinterpreter(struct inode *);
-int scriptexec(struct inode *, char *, char **, int);
+static int cleverexec(char *, char **, int);
+static char checkinterpreter(struct inode *);
+static int scriptexec(struct inode *, char *, char **, int);
 
 int
 exec(char *path, char **argv)
@@ -17,7 +17,7 @@ exec(char *path, char **argv)
   return cleverexec(path, argv, 5);
 }
 
-int
+static int
 cleverexec(char *path, char **argv, int recursion_limit)
 {
   char *s, *last;
@@ -131,12 +131,13 @@ checkinterpreter(struct inode *ip)
   return ln >= 2 && fstr[0] == '#' && fstr[1] == '!'; 
 }
 
-int getaddargv(char *interpreter_path, char **newargv)
+static int
+getaddargv(char *interpreter_path, char **newargv)
 {
   int curarg = 0, curlen = 0, i, firstnonspace = 0;
   for(i = 0; interpreter_path[i]; i++) {
-    if (interpreter_path[i] == ' ') {
-      if (curlen) {
+    if(interpreter_path[i] == ' ') {
+      if(curlen) {
         interpreter_path[i] = 0;
         newargv[curarg++] = interpreter_path + firstnonspace;
         curlen = 0;
@@ -157,7 +158,7 @@ int getaddargv(char *interpreter_path, char **newargv)
   return curarg;
 }
 
-int
+static int
 scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
 {
   char *interpreter_path, *addargv[MAXARG];
