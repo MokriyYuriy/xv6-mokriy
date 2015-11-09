@@ -172,6 +172,7 @@ scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
   size = readi(ip, interpreter_path, 2, PGSIZE);
   iunlockput(ip);
   end_op();
+  ip = 0;
   for(ln = 0; ln < size && interpreter_path[ln] != '\n'; ln++) {}
   if(ln == size) {
     goto bad;
