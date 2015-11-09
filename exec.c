@@ -7,6 +7,8 @@
 #include "x86.h"
 #include "elf.h"
 
+#define RECURSION_LIMIT 5
+
 static int cleverexec(char *, char **, int);
 static char checkinterpreter(struct inode *);
 static int scriptexec(struct inode *, char *, char **, int);
@@ -14,7 +16,7 @@ static int scriptexec(struct inode *, char *, char **, int);
 int
 exec(char *path, char **argv)
 {
-  return cleverexec(path, argv, 5);
+  return cleverexec(path, argv, RECURSION_LIMIT);
 }
 
 static int
