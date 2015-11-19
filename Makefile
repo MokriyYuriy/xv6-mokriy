@@ -173,6 +173,7 @@ UPROGS=\
 	_wc\
 	_zombie\
 	_helloworld\
+	_mkfifo\
 
 fs.img: mkfs README.md $(UPROGS)
 	./mkfs fs.img README.md $(UPROGS)

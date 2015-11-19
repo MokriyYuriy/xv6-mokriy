@@ -244,6 +244,7 @@ create(char *path, short type, short major, short minor)
 
   if((dp = nameiparent(path, name)) == 0)
     return 0;
+  
   ilock(dp);
 
   if((ip = dirlookup(dp, name, &off)) != 0){
@@ -405,7 +406,7 @@ sys_exec(void)
   for(i=0;; i++){
     if(i >= NELEM(argv))
       return -1;
-    if(fetchint(uargv+4*i, (int*)&uarg) < 0)
+   if(fetchint(uargv+4*i, (int*)&uarg) < 0)
       return -1;
     if(uarg == 0){
       argv[i] = 0;
@@ -439,4 +440,26 @@ sys_pipe(void)
   fd[0] = fd0;
   fd[1] = fd1;
   return 0;
+}
+
+int
+sys_mkfifo(void)
+{
+  char *path;
+  struct inode *ip;
+
+  begin_op();
+  if(argstr(0, &path) < 0){
+    goto bad;
+  }
+  ip = create(path, T_FIFO, 0, 0);
+  if(!ip){
+    goto bad;
+  }
+  iunlockput(ip);
+  return 0;
+  
+ bad:
+  end_op();
+  return -1;
 }

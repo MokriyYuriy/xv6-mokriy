@@ -86,6 +86,9 @@ void            log_write(struct buf*);
 void            begin_op();
 void            end_op();
 
+// mkfifo.c
+int             mkfifo(char*);
+
 // mp.c
 extern int      ismp;
 int             mpbcpu(void);

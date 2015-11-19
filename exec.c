@@ -170,6 +170,7 @@ scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
   }
   interpreter_path = kalloc();
   size = readi(ip, interpreter_path, 2, PGSIZE);
+
   iunlockput(ip);
   end_op();
   ip = 0;
