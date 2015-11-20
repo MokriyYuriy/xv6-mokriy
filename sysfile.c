@@ -13,9 +13,12 @@
 #include "fs.h"
 #include "file.h"
 #include "fcntl.h"
+#include "spinlock.h"
+#include "pipe.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
+
 static int
 argfd(int n, int *pfd, struct file **pf)
 {
@@ -81,7 +84,7 @@ sys_write(void)
   struct file *f;
   int n;
   char *p;
-
+  
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
   return filewrite(f, p, n);
@@ -250,7 +253,7 @@ create(char *path, short type, short major, short minor)
   if((ip = dirlookup(dp, name, &off)) != 0){
     iunlockput(dp);
     ilock(ip);
-    if(type == T_FILE && ip->type == T_FILE)
+    if(type == T_FILE && ip->type == type) 
       return ip;
     iunlockput(ip);
     return 0;
@@ -294,23 +297,24 @@ sys_open(void)
 
   begin_op();
 
-  if(omode & O_CREATE){
-    ip = create(path, T_FILE, 0, 0);
-    if(ip == 0){
+  if(!namecmp(path, "debugf")) {
+    cprintf("asd");
+  }
+  
+  if((ip = namei(path)) == 0){
+    if(omode & O_CREATE){
+      ip = create(path, T_FILE, 0, 0);
+    }
+    if(ip == 0) {
       end_op();
       return -1;
     }
-  } else {
-    if((ip = namei(path)) == 0){
-      end_op();
-      return -1;
-    }
-    ilock(ip);
-    if(ip->type == T_DIR && omode != O_RDONLY){
-      iunlockput(ip);
-      end_op();
-      return -1;
-    }
+  }
+  ilock(ip);
+  if(ip->type == T_DIR && omode != O_RDONLY){
+    iunlockput(ip);
+    end_op();
+    return -1;
   }
 
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
@@ -320,9 +324,34 @@ sys_open(void)
     end_op();
     return -1;
   }
+  if(ip->type == T_FIFO){
+    if((omode & O_RDWR) == O_RDWR || (ip->pipefr == 0 && pipealloc(&ip->pipefr, &ip->pipefw) < 0)){
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+  }
   iunlock(ip);
   end_op();
 
+  if(ip->type == T_FIFO){
+    //cprintf("%d\n", &ip);
+    acquire(&ip->pipefr->pipe->lock);
+    if(!(omode & O_WRONLY)){
+      wakeup(&ip->pipefw);
+      if(ip->ref == 1){
+        sleep(&ip->pipefr, &ip->pipefr->pipe->lock);
+      }
+      cprintf("unlock: read %d %d\n", fd, ip);
+    } else {
+      wakeup(&ip->pipefr);
+      if(ip->ref == 1){
+        sleep(&ip->pipefw,  &ip->pipefr->pipe->lock);
+      }
+      cprintf("unlock: write %d %d\n", fd, ip);
+    }
+    release(&ip->pipefr->pipe->lock);
+  }
   f->type = FD_INODE;
   f->ip = ip;
   f->off = 0;

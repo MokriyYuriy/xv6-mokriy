@@ -8,6 +8,7 @@
 #include "fs.h"
 #include "file.h"
 #include "spinlock.h"
+#include "stat.h"
 
 struct devsw devsw[NDEV];
 struct {
@@ -103,8 +104,13 @@ fileread(struct file *f, char *addr, int n)
     return piperead(f->pipe, addr, n);
   if(f->type == FD_INODE){
     ilock(f->ip);
-    if((r = readi(f->ip, addr, f->off, n)) > 0)
-      f->off += r;
+    if(f->ip->type == T_FIFO) {
+      iunlock(f->ip);
+      return piperead(f->ip->pipefr->pipe, addr, n);
+    } else{
+      if((r = readi(f->ip, addr, f->off, n)) > 0)
+        f->off += r;
+    }
     iunlock(f->ip);
     return r;
   }
@@ -129,6 +135,16 @@ filewrite(struct file *f, char *addr, int n)
     // and 2 blocks of slop for non-aligned writes.
     // this really belongs lower down, since writei()
     // might be writing a device like the console.
+    begin_op();
+    ilock(f->ip);
+    if(f->ip->type == T_FIFO){
+      iunlock(f->ip);
+      end_op();
+      r = pipewrite(f->ip->pipefw->pipe, addr, n);
+      return r;
+    }
+    iunlock(f->ip);
+    end_op();
     int max = ((LOGSIZE-1-1-2) / 2) * 512;
     int i = 0;
     while(i < n){

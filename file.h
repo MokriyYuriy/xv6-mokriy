@@ -15,14 +15,15 @@ struct inode {
   uint inum;          // Inode number
   int ref;            // Reference count
   int flags;          // I_BUSY, I_VALID
-
+  struct file *pipefw;
+  struct file *pipefr;
+  
   short type;         // copy of disk inode
   short major;
   short minor;
   short nlink;
   uint size;
   uint addrs[NDIRECT+1];
-  struct pipe *pipe;
 };
 #define I_BUSY 0x1
 #define I_VALID 0x2
