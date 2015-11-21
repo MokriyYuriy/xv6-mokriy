@@ -225,6 +225,7 @@ sys_unlink(void)
   iunlockput(dp);
 
   ip->nlink--;
+  
   iupdate(ip);
   iunlockput(ip);
 
@@ -342,12 +343,16 @@ sys_open(void)
       if(ip->ref == 1){
         sleep(&ip->pipefr, &ip->pipefr->pipe->lock);
       }
+      ip->pipefr->pipe->readopen = 1;
+      ip->pipefr->ref++;
       cprintf("unlock: read %d %d\n", fd, ip);
     } else {
       wakeup(&ip->pipefr);
       if(ip->ref == 1){
         sleep(&ip->pipefw,  &ip->pipefr->pipe->lock);
       }
+      ip->pipefr->pipe->writeopen = 1;
+      ip->pipefw->ref++;
       cprintf("unlock: write %d %d\n", fd, ip);
     }
     release(&ip->pipefr->pipe->lock);
@@ -486,6 +491,7 @@ sys_mkfifo(void)
     goto bad;
   }
   iunlockput(ip);
+  end_op();
   return 0;
   
  bad:

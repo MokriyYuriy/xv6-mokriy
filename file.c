@@ -9,6 +9,7 @@
 #include "file.h"
 #include "spinlock.h"
 #include "stat.h"
+#include "pipe.h"
 
 struct devsw devsw[NDEV];
 struct {
@@ -74,7 +75,25 @@ fileclose(struct file *f)
     pipeclose(ff.pipe, ff.writable);
   else if(ff.type == FD_INODE){
     begin_op();
-    iput(ff.ip);
+    ilock(ff.ip);
+    if (ff.ip->type == T_FIFO) {
+      //acquire(&ftable.lock);
+      ff.ip->pipefr->ref -= ff.readable;
+      ff.ip->pipefw->ref -= ff.writable;
+      if (ff.ip->pipefr->ref < 2) {
+        ff.ip->pipefr->pipe->readopen = 0;
+      }
+      if (ff.ip->pipefw->ref < 2) {
+        ff.ip->pipefw->pipe->writeopen = 0;
+      }
+      if (ff.ip->pipefw->pipe->writeopen == 0 && ff.ip->pipefr->pipe->readopen == 0) {
+        fileclose(ff.ip->pipefr);
+        ff.ip->pipefw->pipe = 0;
+        fileclose(ff.ip->pipefw);
+      }
+      //release(&ftable.lock);
+    }
+    iunlockput(ff.ip);
     end_op();
   }
 }

@@ -13,6 +13,5 @@ main(int argc, char **argv)
       printf(1, "mkfifo: cannot create fifo file %s\n", argv[i]);
     }
   }
-  
   exit();
 }
