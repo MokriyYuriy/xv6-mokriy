@@ -342,11 +342,9 @@ sys_open(void)
   end_op();
 
   if(ip->type == T_FIFO && !(omode & O_NBLOCK)){
-    //cprintf("%d\n", &ip);
     acquire(&ip->pipefw->pipe->lock);
     if(!(omode & O_WRONLY)){
       ip->pipefr->pipe->readopen++;
-      //cprintf("unlock: read %d %d\n", fd, ip);
       f->pipe = ip->pipefr->pipe;
       wakeup(&ip->pipefw);
       if(!ip->pipefr->pipe->writeopen){
@@ -355,7 +353,6 @@ sys_open(void)
       }
     } else {
       ip->pipefw->pipe->writeopen++;
-      //cprintf("unlock: write %d %d\n", fd, ip);
       f->pipe = ip->pipefw->pipe;
       wakeup(&ip->pipefr);
       if(!ip->pipefw->pipe->readopen){

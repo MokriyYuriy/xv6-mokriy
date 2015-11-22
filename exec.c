@@ -10,7 +10,7 @@
 #define RECURSION_LIMIT 5
 
 static int cleverexec(char *, char **, int);
-static char checkinterpreter(struct inode *);
+static char checkshebang(struct inode *);
 static int scriptexec(struct inode *, char *, char **, int);
 
 int
@@ -126,7 +126,7 @@ cleverexec(char *path, char **argv, int recursion_limit)
 }
 
 char
-checkinterpreter(struct inode *ip)
+checkshebang(struct inode *ip)
 {
   char fstr[2];
   int ln = readi(ip, fstr, 0, 2);
@@ -143,18 +143,18 @@ getaddargv(char *interpreter_path, char **newargv)
         interpreter_path[i] = 0;
         newargv[curarg++] = interpreter_path + firstnonspace;
         curlen = 0;
-        if (curarg == MAXARG) {
+        if(curarg == MAXARG){
           return MAXARG;
         }
       }
     } else {
-      if (curlen == 0) {
+      if(curlen == 0){
         firstnonspace = i;
       }
       curlen++;
     } 
   }
-  if (curlen) {
+  if(curlen){
     newargv[curarg++] = interpreter_path + firstnonspace;
   }
   return curarg;
@@ -165,7 +165,7 @@ scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
 {
   char *interpreter_path, *addargv[MAXARG];
   int ln, argc, i, res, size, addargc;
-  if(!checkinterpreter(ip)) {
+  if(!checkshebang(ip)){
     goto bad;
   }
   interpreter_path = kalloc();
@@ -175,13 +175,13 @@ scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
   end_op();
   ip = 0;
   for(ln = 0; ln < size && interpreter_path[ln] != '\n'; ln++) {}
-  if(ln == size) {
+  if(ln == size){
     goto bad;
   }
   interpreter_path[ln] = 0;
   for(argc = 0; argv[argc]; argc++) {}
   addargc = getaddargv(interpreter_path, addargv);
-  if (!addargc || addargc + argc >= MAXARG) {
+  if(!addargc || addargc + argc >= MAXARG){
     goto bad;
   }
   for(i = argc; i >= 0; i--) {
@@ -195,7 +195,7 @@ scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
   kfree(interpreter_path);
   return res;
  bad:
-  if(ip) {
+  if(ip){
     iunlockput(ip);
     end_op();
   }
