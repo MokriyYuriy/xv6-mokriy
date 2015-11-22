@@ -75,25 +75,7 @@ fileclose(struct file *f)
     pipeclose(ff.pipe, ff.writable);
   else if(ff.type == FD_INODE){
     begin_op();
-    ilock(ff.ip);
-    if (ff.ip->type == T_FIFO) {
-      //acquire(&ftable.lock);
-      ff.ip->pipefr->ref -= ff.readable;
-      ff.ip->pipefw->ref -= ff.writable;
-      if (ff.ip->pipefr->ref < 2) {
-        ff.ip->pipefr->pipe->readopen = 0;
-      }
-      if (ff.ip->pipefw->ref < 2) {
-        ff.ip->pipefw->pipe->writeopen = 0;
-      }
-      if (ff.ip->pipefw->pipe->writeopen == 0 && ff.ip->pipefr->pipe->readopen == 0) {
-        fileclose(ff.ip->pipefr);
-        ff.ip->pipefw->pipe = 0;
-        fileclose(ff.ip->pipefw);
-      }
-      //release(&ftable.lock);
-    }
-    iunlockput(ff.ip);
+    iput(ff.ip);
     end_op();
   }
 }
@@ -123,13 +105,8 @@ fileread(struct file *f, char *addr, int n)
     return piperead(f->pipe, addr, n);
   if(f->type == FD_INODE){
     ilock(f->ip);
-    if(f->ip->type == T_FIFO) {
-      iunlock(f->ip);
-      return piperead(f->ip->pipefr->pipe, addr, n);
-    } else{
-      if((r = readi(f->ip, addr, f->off, n)) > 0)
-        f->off += r;
-    }
+    if((r = readi(f->ip, addr, f->off, n)) > 0)
+      f->off += r;
     iunlock(f->ip);
     return r;
   }
@@ -156,12 +133,6 @@ filewrite(struct file *f, char *addr, int n)
     // might be writing a device like the console.
     begin_op();
     ilock(f->ip);
-    if(f->ip->type == T_FIFO){
-      iunlock(f->ip);
-      end_op();
-      r = pipewrite(f->ip->pipefw->pipe, addr, n);
-      return r;
-    }
     iunlock(f->ip);
     end_op();
     int max = ((LOGSIZE-1-1-2) / 2) * 512;

@@ -48,15 +48,16 @@ pipealloc(struct file **f0, struct file **f1)
 void
 pipeclose(struct pipe *p, int writable)
 {
-  if(p == 0) {
-    return;
-  }
   acquire(&p->lock);
   if(writable){
-    p->writeopen = 0;
+    if(p->writeopen > 0){
+      p->writeopen--;
+    }
     wakeup(&p->nread);
   } else {
-    p->readopen = 0;
+    if(p->readopen > 0){
+      p->readopen--;
+    }
     wakeup(&p->nwrite);
   }
   if(p->readopen == 0 && p->writeopen == 0){

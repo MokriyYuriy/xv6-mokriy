@@ -298,10 +298,6 @@ sys_open(void)
 
   begin_op();
 
-  if(!namecmp(path, "debugf")) {
-    cprintf("asd");
-  }
-  
   if((ip = namei(path)) == 0){
     if(omode & O_CREATE){
       ip = create(path, T_FILE, 0, 0);
@@ -310,9 +306,10 @@ sys_open(void)
       end_op();
       return -1;
     }
+  } else {
+    ilock(ip);
   }
-  ilock(ip);
-  if(ip->type == T_DIR && omode != O_RDONLY){
+  if(ip->type == T_DIR && (omode | O_RDONLY | O_NBLOCK) != (O_NBLOCK | O_RDONLY)){
     iunlockput(ip);
     end_op();
     return -1;
@@ -325,38 +322,56 @@ sys_open(void)
     end_op();
     return -1;
   }
-  if(ip->type == T_FIFO){
-    if((omode & O_RDWR) == O_RDWR || (ip->pipefr == 0 && pipealloc(&ip->pipefr, &ip->pipefw) < 0)){
+  if(ip->type == T_FIFO && !(omode & O_NBLOCK)){
+    if((omode & O_RDWR) == O_RDWR){
       iunlockput(ip);
       end_op();
       return -1;
+    }
+    if(ip->pipefr == 0){
+      if(pipealloc(&ip->pipefr, &ip->pipefw) < 0) {
+        iunlockput(ip);
+        end_op();
+        return -1;
+      } else {
+        ip->pipefr->pipe->writeopen = ip->pipefr->pipe->readopen = 0;
+      }
     }
   }
   iunlock(ip);
   end_op();
 
-  if(ip->type == T_FIFO){
+  if(ip->type == T_FIFO && !(omode & O_NBLOCK)){
     //cprintf("%d\n", &ip);
-    acquire(&ip->pipefr->pipe->lock);
+    acquire(&ip->pipefw->pipe->lock);
     if(!(omode & O_WRONLY)){
+      ip->pipefr->pipe->readopen++;
+      //cprintf("unlock: read %d %d\n", fd, ip);
+      f->pipe = ip->pipefr->pipe;
       wakeup(&ip->pipefw);
-      if(ip->ref == 1){
-        sleep(&ip->pipefr, &ip->pipefr->pipe->lock);
+      if(!ip->pipefr->pipe->writeopen){
+        sleep(&ip->pipefr, &ip->pipefw->pipe->lock);
+        wakeup(&ip->pipefw);
       }
-      ip->pipefr->pipe->readopen = 1;
-      ip->pipefr->ref++;
-      cprintf("unlock: read %d %d\n", fd, ip);
     } else {
+      ip->pipefw->pipe->writeopen++;
+      //cprintf("unlock: write %d %d\n", fd, ip);
+      f->pipe = ip->pipefw->pipe;
       wakeup(&ip->pipefr);
-      if(ip->ref == 1){
-        sleep(&ip->pipefw,  &ip->pipefr->pipe->lock);
+      if(!ip->pipefw->pipe->readopen){
+        sleep(&ip->pipefw,  &ip->pipefw->pipe->lock);
+        wakeup(&ip->pipefr);
       }
-      ip->pipefr->pipe->writeopen = 1;
-      ip->pipefw->ref++;
-      cprintf("unlock: write %d %d\n", fd, ip);
     }
-    release(&ip->pipefr->pipe->lock);
+    release(&ip->pipefw->pipe->lock);
+    f->type = FD_PIPE;
+    f->ip = ip;
+    f->off = 0;
+    f->readable = !(omode & O_WRONLY);
+    f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+    return fd;
   }
+  
   f->type = FD_INODE;
   f->ip = ip;
   f->off = 0;
