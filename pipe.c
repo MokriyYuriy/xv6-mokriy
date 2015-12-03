@@ -23,6 +23,7 @@ pipealloc(struct file **f0, struct file **f1)
   p->writeopen = 1;
   p->nwrite = 0;
   p->nread = 0;
+  p->fifofr = p->fifofw = 0;
   initlock(&p->lock, "pipe");
   (*f0)->type = FD_PIPE;
   (*f0)->readable = 1;

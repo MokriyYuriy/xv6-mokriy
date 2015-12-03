@@ -2,6 +2,7 @@
 
 struct pipe {
   struct spinlock lock;
+  struct file *fifofr, *fifofw;
   char data[PIPESIZE];
   uint nread;     // number of bytes read
   uint nwrite;    // number of bytes written

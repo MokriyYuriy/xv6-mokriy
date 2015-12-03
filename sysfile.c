@@ -328,13 +328,16 @@ sys_open(void)
       end_op();
       return -1;
     }
-    if(ip->pipefr == 0){
-      if(pipealloc(&ip->pipefr, &ip->pipefw) < 0) {
+    if(ip->pipe == 0){
+      struct file *fr, *fw;
+      if(pipealloc(&fr, &fw) < 0) {
         iunlockput(ip);
         end_op();
         return -1;
       } else {
-        ip->pipefr->pipe->writeopen = ip->pipefr->pipe->readopen = 0;
+        ip->pipe = fr->pipe;
+        ip->pipe->writeopen = ip->pipe->readopen = 0;
+        fw->type = fr->type = 0;
       }
     }
   }
@@ -342,25 +345,25 @@ sys_open(void)
   end_op();
 
   if(ip->type == T_FIFO && !(omode & O_NBLOCK)){
-    acquire(&ip->pipefw->pipe->lock);
+    acquire(&ip->pipe->lock);
     if(!(omode & O_WRONLY)){
-      ip->pipefr->pipe->readopen++;
-      f->pipe = ip->pipefr->pipe;
-      wakeup(&ip->pipefw);
-      if(!ip->pipefr->pipe->writeopen){
-        sleep(&ip->pipefr, &ip->pipefw->pipe->lock);
-        wakeup(&ip->pipefw);
+      ip->pipe->readopen++;
+      f->pipe = ip->pipe;
+      wakeup(&ip->pipe->writeopen);
+      if(!ip->pipe->writeopen){
+        sleep(&ip->pipe->readopen, &ip->pipe->lock);
+        wakeup(&ip->pipe->writeopen);
       }
     } else {
-      ip->pipefw->pipe->writeopen++;
-      f->pipe = ip->pipefw->pipe;
-      wakeup(&ip->pipefr);
-      if(!ip->pipefw->pipe->readopen){
-        sleep(&ip->pipefw,  &ip->pipefw->pipe->lock);
-        wakeup(&ip->pipefr);
+      ip->pipe->writeopen++;
+      f->pipe = ip->pipe;
+      wakeup(&ip->pipe->readopen);
+      if(!ip->pipe->readopen){
+        sleep(&ip->pipe->writeopen,  &ip->pipe->lock);
+        wakeup(&ip->pipe->readopen);
       }
     }
-    release(&ip->pipefw->pipe->lock);
+    release(&ip->pipe->lock);
     f->type = FD_PIPE;
     f->ip = ip;
     f->off = 0;

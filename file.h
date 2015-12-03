@@ -15,8 +15,7 @@ struct inode {
   uint inum;          // Inode number
   int ref;            // Reference count
   int flags;          // I_BUSY, I_VALID
-  struct file *pipefw;
-  struct file *pipefr;
+  struct pipe *pipe;
   
   short type;         // copy of disk inode
   short major;
