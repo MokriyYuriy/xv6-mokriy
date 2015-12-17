@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <sys/stat.h>
 
 #define stat xv6_stat  // avoid clash with host struct stat
 #include "types.h"
@@ -40,6 +41,9 @@ void rinode(uint inum, struct dinode *ip);
 void rsect(uint sec, void *buf);
 uint ialloc(ushort type);
 void iappend(uint inum, void *p, int n);
+void fixsizedir(uint);
+void createtc(uint);
+uint buildir(uint, const char *);
 
 // convert to intel byte order
 ushort
@@ -62,6 +66,101 @@ xint(uint x)
   a[2] = x >> 16;
   a[3] = x >> 24;
   return y;
+}
+
+uint
+builddir(uint pdir, const char *name)
+{
+  struct dinode din;
+  struct dirent de;
+  short nlink;
+  uint dir;
+  
+  dir = ialloc(T_DIR);
+
+  bzero(&de, sizeof(de));
+  de.inum = xshort(dir);
+  strcpy(de.name, ".");
+  iappend(dir, &de, sizeof(de));
+
+  bzero(&de, sizeof(de));
+  de.inum = xshort(pdir);
+  strcpy(de.name, "..");
+  iappend(dir, &de, sizeof(de));
+
+  bzero(&de, sizeof(de));
+  de.inum = xshort(dir);
+  strncpy(de.name, name, DIRSIZ);
+  iappend(pdir, &de, sizeof(de));
+
+  
+  
+  rinode(pdir, &din);
+  nlink = xshort(din.nlink);
+  nlink++;
+  din.nlink = xshort(nlink);
+  winode(pdir, &din);
+  
+  return dir;
+}
+
+
+void
+createetc(uint rootino)
+{
+  int fd;
+  uint ietc, ipasswd;
+  size_t sz, cnt;
+  struct dirent de;
+  char buf[BSIZE], cc;
+  
+  mkdir("etc", 0777);
+  fd = open("etc/passwd", O_RDONLY);
+
+  if(fd < 0){
+    char default_password_string[] = "root::0";
+ 
+    fd = open("etc/passwd", O_RDWR|O_TRUNC|O_CREAT, 0666);
+ 
+    if(fd < 0){
+      perror("etc/passwd");
+      exit(1);
+    }
+    cnt = 0;
+    while((sz = write(fd, default_password_string + cnt, sizeof(default_password_string) - cnt)) > 0){
+      cnt += sz;
+    }
+    close(fd);
+    fd = open("etc/passwd", O_RDONLY);
+  }
+
+  ietc = builddir(rootino, "etc");
+  
+  ipasswd = ialloc(T_FILE);
+
+  bzero(&de, sizeof(de));
+  de.inum = xshort(ipasswd);
+  strncpy(de.name, "passwd", DIRSIZ);
+  iappend(ietc, &de, sizeof(de));
+  
+  while((cc = read(fd, buf, sizeof(buf))) > 0)
+    iappend(ipasswd, buf, cc);
+
+  fixsizedir(ietc);
+
+  close(fd);
+}
+
+void
+fixsizedir(uint dir)
+{
+  struct dinode din;
+  int off;
+  rinode(dir, &din);
+  off = xint(din.size);
+  off = ((off/BSIZE) + 1) * BSIZE;
+  din.size = xint(off);
+  winode(dir, &din);
 }
 
 int
@@ -155,6 +254,8 @@ main(int argc, char *argv[])
     close(fd);
   }
 
+  createetc(rootino);
+  
   // fix size of root inode dir
   rinode(rootino, &din);
   off = xint(din.size);
