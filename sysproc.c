@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "mutex.h"
 
 int
 sys_fork(void)
@@ -88,4 +89,28 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+int
+sys_mlock(void)
+{
+  int n;
+  
+  if(argint(0, &n) < 0)
+    return -1;
+  if(n < 0 || n >= MUTEXSIZE)
+    return -1;
+  return mlock(n);
+}
+
+int
+sys_munlock(void)
+{
+  int n;
+
+  if(argint(0, &n) < 0)
+    return -1;
+  if(n < 0 || n >= MUTEXSIZE)
+    return -1;
+  return munlock(n);
 }

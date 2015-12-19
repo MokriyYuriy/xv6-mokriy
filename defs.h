@@ -24,6 +24,11 @@ void            panic(char*) __attribute__((noreturn));
 // exec.c
 int             exec(char*, char**);
 
+// mutex.c
+int             mlock(int);
+int             munlock(int);
+
+
 // file.c
 struct file*    filealloc(void);
 void            fileclose(struct file*);

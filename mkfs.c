@@ -92,8 +92,6 @@ builddir(uint pdir, const char *name)
   de.inum = xshort(dir);
   strncpy(de.name, name, DIRSIZ);
   iappend(pdir, &de, sizeof(de));
-
-  
   
   rinode(pdir, &din);
   nlink = xshort(din.nlink);

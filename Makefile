@@ -2,6 +2,8 @@ OBJS = \
 	bio.o\
 	console.o\
 	exec.o\
+	mutex.o\
+	passwdhash.o\
 	file.o\
 	fs.o\
 	ide.o\
@@ -174,6 +176,8 @@ UPROGS=\
 	_zombie\
 	_helloworld\
 	_mkfifo\
+	_testmutex\
+	_stat\
 
 fs.img: mkfs README.md $(UPROGS)
 	./mkfs fs.img README.md $(UPROGS)
@@ -241,7 +245,7 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 # check in that version.
 
 EXTRA=\
-	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
+	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c passwdhash.c\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
 	printf.c umalloc.c\
 	README.md dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
