@@ -72,12 +72,12 @@ fileclose(struct file *f)
   release(&ftable.lock);
   
   if(ff.type == FD_PIPE) {
-    pipeclose(ff.pipe, ff.writable);
     begin_op();
     if(ff.ip) {
       iput(ff.ip);
     }
     end_op();
+    pipeclose(ff.pipe, ff.writable);
   }
   else if(ff.type == FD_INODE){
     begin_op();
@@ -137,10 +137,6 @@ filewrite(struct file *f, char *addr, int n)
     // and 2 blocks of slop for non-aligned writes.
     // this really belongs lower down, since writei()
     // might be writing a device like the console.
-    begin_op();
-    ilock(f->ip);
-    iunlock(f->ip);
-    end_op();
     int max = ((LOGSIZE-1-1-2) / 2) * 512;
     int i = 0;
     while(i < n){

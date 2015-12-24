@@ -163,7 +163,7 @@ getaddargv(char *interpreter_path, char **newargv)
 static int
 scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
 {
-  char *interpreter_path, *addargv[MAXARG];
+  char *interpreter_path = 0, *addargv[MAXARG];
   int ln, argc, i, res, size, addargc;
   if(!checkshebang(ip)){
     goto bad;
@@ -199,6 +199,8 @@ scriptexec(struct inode *ip, char *pathname, char **argv, int recursion_limit)
     iunlockput(ip);
     end_op();
   }
-  kfree(interpreter_path);
+  if(interpreter_path){
+    kfree(interpreter_path);
+  }
   return -1;
 }

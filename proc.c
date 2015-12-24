@@ -173,7 +173,7 @@ void
 exit(void)
 {
   struct proc *p;
-  int fd;
+  int fd, mutex;
 
   if(proc == initproc)
     panic("init exiting");
@@ -183,6 +183,12 @@ exit(void)
     if(proc->ofile[fd]){
       fileclose(proc->ofile[fd]);
       proc->ofile[fd] = 0;
+    }
+  }
+
+  for(mutex = 0; mutex < MUTEXSIZE; mutex++){
+    if(proc->lockmutex[mutex]){
+      munlock(mutex);
     }
   }
 

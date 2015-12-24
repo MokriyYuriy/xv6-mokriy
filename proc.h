@@ -1,4 +1,5 @@
 // Segments in proc->gdt.
+#include "mutex.h"
 #define NSEGS     7
 
 // Per-CPU state
@@ -65,6 +66,7 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
+  char lockmutex[MUTEXSIZE];
   char name[16];               // Process name (debugging)
 };
 

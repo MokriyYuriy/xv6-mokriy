@@ -3,7 +3,6 @@ OBJS = \
 	console.o\
 	exec.o\
 	mutex.o\
-	passwdhash.o\
 	file.o\
 	fs.o\
 	ide.o\
@@ -136,7 +135,7 @@ tags: $(OBJS) entryother.S _init
 vectors.S: vectors.pl
 	perl vectors.pl > vectors.S
 
-ULIB = ulib.o usys.o printf.o umalloc.o
+ULIB = ulib.o usys.o printf.o umalloc.o passwdhash.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
@@ -178,6 +177,7 @@ UPROGS=\
 	_mkfifo\
 	_testmutex\
 	_stat\
+	_login\
 
 fs.img: mkfs README.md $(UPROGS)
 	./mkfs fs.img README.md $(UPROGS)

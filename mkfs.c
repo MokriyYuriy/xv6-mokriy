@@ -116,7 +116,7 @@ createetc(uint rootino)
   fd = open("etc/passwd", O_RDONLY);
 
   if(fd < 0){
-    char default_password_string[] = "root::0";
+    char default_password_string[] = "root:4307:0\n";
  
     fd = open("etc/passwd", O_RDWR|O_TRUNC|O_CREAT, 0666);
  

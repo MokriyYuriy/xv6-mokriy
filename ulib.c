@@ -103,3 +103,12 @@ memmove(void *vdst, void *vsrc, int n)
     *dst++ = *src++;
   return vdst;
 }
+
+void
+delnline(char *str)
+{
+  char *s;
+  
+  for(s = str; *s && *s != '\t' && *s != '\n'; s++) {}
+  *s = 0;
+}

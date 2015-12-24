@@ -11,7 +11,7 @@ main() {
     for (i = 0; i < 100; i++) {
      printf(1, "1 %d\n", i);
     }
-    munlock(0);
+    //munlock(0);
     exit();
   }
   pid = fork();

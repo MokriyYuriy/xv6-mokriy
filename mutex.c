@@ -30,6 +30,7 @@ mlock(int n)
       sleep(&mutex[n], &mutex[n].lock);
       continue;
     }
+    proc->lockmutex[n] = 1;
     mutex[n].islock = 1;
     mutex[n].curpid = proc->pid;
     release(&mutex[n].lock);
@@ -48,6 +49,7 @@ munlock(int n)
   }
   mutex[n].islock = 0;
   mutex[n].curpid = 0;
+  proc->lockmutex[n] = 0;
   wakeup(&mutex[n]);
   release(&mutex[n].lock);
   return 0;
